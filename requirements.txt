@@ -1,0 +1,5 @@
+PyQt6
+faster-whisper>=1.1.0
+imageio-ffmpeg
+nvidia-cublas-cu12
+nvidia-cudnn-cu12
