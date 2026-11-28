@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
     QLabel, QHeaderView, QMessageBox, QProgressBar, QComboBox,
     QDialog, QListWidget, QListWidgetItem, QLineEdit, QColorDialog,
     QSplitter, QGroupBox, QRadioButton, QButtonGroup, QScrollArea,
-    QFrame, QAbstractItemView, QDoubleSpinBox, QSlider
+    QFrame, QAbstractItemView, QSlider
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QUrl, QEvent
 from PyQt6.QtGui import QColor, QBrush, QFont
@@ -487,7 +487,7 @@ class TranscribeThread(QThread):
             self.error.emit(str(e))
 
 
-# 3. Thread สำหรับตัดและรวมไฟล์เสียง (รองรับ Padding เผื่อเวลา เริ่ม/จบ)
+# 3. Thread สำหรับตัดและรวมไฟล์เสียง
 class AudioExportThread(QThread):
     progress = pyqtSignal(str)
     finished = pyqtSignal(str)
@@ -627,13 +627,11 @@ class SermonTranscriberApp(QMainWindow):
         self.current_row = -1
         self._is_updating_table = False
         self._is_slider_dragging = False
-        self._last_pad_start_val = 0.0
-        self._last_pad_end_val = 0.0
 
         # สถานะสำหรับ Media Player เล่นท่อนที่เลือกต่อกัน
-        self.play_queue = []        # ลิสต์ของ index แถวใน transcript_data ที่จะเล่นต่อกัน
-        self.play_queue_idx = -1    # ตำแหน่งปัจจุบันใน play_queue
-        self.play_mode_label = ""   # ชื่อโหมดที่กำลังเล่น (ที่ติ๊กทั้งหมด / เฉพาะที่เลือกอยู่)
+        self.play_queue = []
+        self.play_queue_idx = -1
+        self.play_mode_label = ""
         self.active_seg_start_ms = 0
         self.active_seg_end_ms = 0
 
@@ -800,52 +798,28 @@ class SermonTranscriberApp(QMainWindow):
                 border-radius: 4px;
                 padding: 4px 6px;
             }
-            QDoubleSpinBox {
+            QLineEdit#StepInput {
                 background-color: #FFFFFF;
                 color: #0F172A;
-                border: 1px solid #64748B;
+                border: 1px solid #94A3B8;
                 border-radius: 4px;
-                padding: 2px 20px 2px 4px;
+                padding: 2px 4px;
+                font-size: 14px;
+                font-weight: bold;
+                min-height: 24px;
+            }
+            QPushButton#StepMiniBtn {
+                background-color: #F1F5F9;
+                color: #0F172A;
+                border: 1px solid #94A3B8;
+                border-radius: 3px;
+                padding: 0px;
                 font-size: 12px;
                 font-weight: bold;
-                min-height: 22px;
             }
-            QDoubleSpinBox::up-button {
-                subcontrol-origin: border;
-                subcontrol-position: top right;
-                width: 18px;
-                height: 11px;
-                background-color: #E2E8F0;
-                border-left: 1px solid #94A3B8;
-                border-bottom: 1px solid #CBD5E1;
-                border-top-right-radius: 3px;
-            }
-            QDoubleSpinBox::down-button {
-                subcontrol-origin: border;
-                subcontrol-position: bottom right;
-                width: 18px;
-                height: 11px;
-                background-color: #E2E8F0;
-                border-left: 1px solid #94A3B8;
-                border-top-right-radius: 0px;
-                border-bottom-right-radius: 3px;
-            }
-            QDoubleSpinBox::up-button:hover, QDoubleSpinBox::down-button:hover {
-                background-color: #BAE6FD;
-            }
-            QDoubleSpinBox::up-arrow {
-                width: 0;
-                height: 0;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-bottom: 5px solid #0F172A;
-            }
-            QDoubleSpinBox::down-arrow {
-                width: 0;
-                height: 0;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 5px solid #0F172A;
+            QPushButton#StepMiniBtn:hover {
+                background-color: #DBEAFE;
+                border-color: #2563EB;
             }
             QProgressBar {
                 border: 1px solid #CBD5E1;
@@ -927,7 +901,7 @@ class SermonTranscriberApp(QMainWindow):
         left_layout.setContentsMargins(0, 0, 4, 0)
         left_layout.setSpacing(5)
 
-        # แถบเครื่องมือด้านบนตาราง แถวที่ 1: ติ๊กเลือก + รวมท่อน + เพิ่มท่อน + ลบท่อน + เผื่อเวลา เริ่ม/จบ
+        # แถบเครื่องมือด้านบนตาราง
         top_tool_1 = QHBoxLayout()
         top_tool_1.setSpacing(5)
         btn_all = QPushButton("[✓] ทั้งหมด")
@@ -959,55 +933,84 @@ class SermonTranscriberApp(QMainWindow):
         top_tool_1.addSpacing(6)
         top_tool_1.addWidget(QLabel("ชนิด:"))
         self.combo_batch_cat = QComboBox()
-        self.combo_batch_cat.setMinimumWidth(100)
+        self.combo_batch_cat.setMinimumWidth(110)
+        self.combo_batch_cat.setToolTip("ไฮไลต์แถวที่ต้องการ (แถวเดียวหรือหลายแถวด้วย Shift/Ctrl) แล้วเลือกชนิดที่นี่เพื่อเปลี่ยนทันที")
+        self.combo_batch_cat.activated.connect(self.on_combo_category_activated)
         self.btn_manage_cat = QPushButton("🎨 ชนิด/สี")
         self.btn_manage_cat.setToolTip("จัดการเพิ่ม/แก้ไขชื่อและสีของชนิดเนื้อเรื่อง")
         self.btn_manage_cat.clicked.connect(self.open_category_manager)
 
-        btn_apply_cat = QPushButton("ใส่ให้ที่ติ๊ก")
-        btn_apply_cat.clicked.connect(self.apply_category_to_checked)
         btn_check_cat = QPushButton("ติ๊กเฉพาะชนิดนี้")
         btn_check_cat.clicked.connect(self.check_rows_by_category)
 
         top_tool_1.addWidget(self.combo_batch_cat)
         top_tool_1.addWidget(self.btn_manage_cat)
-        top_tool_1.addWidget(btn_apply_cat)
         top_tool_1.addWidget(btn_check_cat)
 
-        # ช่องปรับเวลา เริ่ม / จบ (กดปุ่มเพิ่ม/ลด ▲▼ เพื่อปรับท่อนที่เลือกอยู่ปัจจุบันทันที)
+        # ช่องปรับเวลา เริ่ม / จบ (ใส่ค่าก้าวกระโดดฟิกซ์ไว้เอง เช่น 1, 2, 3 แล้วกด + หรือ - เพื่อปรับเวลาท่อนที่เลือกทันที)
         top_tool_1.addSpacing(6)
         lbl_pad_s = QLabel("เริ่ม:")
-        lbl_pad_s.setStyleSheet("color: #0F172A; font-weight: bold;")
+        lbl_pad_s.setStyleSheet("color: #1E3A5F; font-size: 14px; font-weight: bold;")
         top_tool_1.addWidget(lbl_pad_s)
-        self.spin_pad_start = QDoubleSpinBox()
-        self.spin_pad_start.setRange(-30.0, 30.0)
-        self.spin_pad_start.setSingleStep(0.5)
-        self.spin_pad_start.setDecimals(1)
-        self.spin_pad_start.setValue(0.0)
-        self.spin_pad_start.setMinimumWidth(84)
-        self.spin_pad_start.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        self.spin_pad_start.setToolTip("กดปุ่มเพิ่ม (▲) หรือลด (▼) เพื่อปรับเวลาเริ่มของท่อนที่เลือกอยู่ปัจจุบันทีละ 0.5 วินาที")
-        self.spin_pad_start.valueChanged.connect(self.on_adjust_start_time_step)
-        top_tool_1.addWidget(self.spin_pad_start)
+
+        self.txt_step_start = QLineEdit("1")
+        self.txt_step_start.setObjectName("StepInput")
+        self.txt_step_start.setFixedWidth(44)
+        self.txt_step_start.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.txt_step_start.setToolTip("พิมพ์จำนวนวินาทีที่ต้องการเพิ่ม/ลดฟิกซ์ไว้ (เช่น 1, 2, 3) แล้วกดปุ่ม + หรือ - ด้านข้าง")
+        top_tool_1.addWidget(self.txt_step_start)
+
+        s_btn_col = QVBoxLayout()
+        s_btn_col.setSpacing(1)
+        s_btn_col.setContentsMargins(0, 0, 0, 0)
+        btn_s_plus = QPushButton("+")
+        btn_s_plus.setObjectName("StepMiniBtn")
+        btn_s_plus.setFixedSize(22, 14)
+        btn_s_plus.setToolTip("เพิ่มเวลาเริ่มของท่อนที่เลือกอยู่ตามจำนวนวินาทีในช่อง")
+        btn_s_plus.clicked.connect(lambda: self.adjust_selected_time("start", 1))
+        btn_s_minus = QPushButton("-")
+        btn_s_minus.setObjectName("StepMiniBtn")
+        btn_s_minus.setFixedSize(22, 14)
+        btn_s_minus.setToolTip("ลดเวลาเริ่มของท่อนที่เลือกอยู่ตามจำนวนวินาทีในช่อง")
+        btn_s_minus.clicked.connect(lambda: self.adjust_selected_time("start", -1))
+        s_btn_col.addWidget(btn_s_plus)
+        s_btn_col.addWidget(btn_s_minus)
+        top_tool_1.addLayout(s_btn_col)
+
         lbl_unit_s = QLabel("วิ")
-        lbl_unit_s.setStyleSheet("color: #0F172A;")
+        lbl_unit_s.setStyleSheet("color: #0F172A; font-size: 14px;")
         top_tool_1.addWidget(lbl_unit_s)
 
         lbl_pad_e = QLabel("จบ:")
-        lbl_pad_e.setStyleSheet("color: #0F172A; font-weight: bold;")
+        lbl_pad_e.setStyleSheet("color: #1E3A5F; font-size: 14px; font-weight: bold;")
         top_tool_1.addWidget(lbl_pad_e)
-        self.spin_pad_end = QDoubleSpinBox()
-        self.spin_pad_end.setRange(-30.0, 30.0)
-        self.spin_pad_end.setSingleStep(0.5)
-        self.spin_pad_end.setDecimals(1)
-        self.spin_pad_end.setValue(0.0)
-        self.spin_pad_end.setMinimumWidth(84)
-        self.spin_pad_end.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        self.spin_pad_end.setToolTip("กดปุ่มเพิ่ม (▲) หรือลด (▼) เพื่อปรับเวลาจบของท่อนที่เลือกอยู่ปัจจุบันทีละ 0.5 วินาที")
-        self.spin_pad_end.valueChanged.connect(self.on_adjust_end_time_step)
-        top_tool_1.addWidget(self.spin_pad_end)
+
+        self.txt_step_end = QLineEdit("1")
+        self.txt_step_end.setObjectName("StepInput")
+        self.txt_step_end.setFixedWidth(44)
+        self.txt_step_end.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.txt_step_end.setToolTip("พิมพ์จำนวนวินาทีที่ต้องการเพิ่ม/ลดฟิกซ์ไว้ (เช่น 1, 2, 3) แล้วกดปุ่ม + หรือ - ด้านข้าง")
+        top_tool_1.addWidget(self.txt_step_end)
+
+        e_btn_col = QVBoxLayout()
+        e_btn_col.setSpacing(1)
+        e_btn_col.setContentsMargins(0, 0, 0, 0)
+        btn_e_plus = QPushButton("+")
+        btn_e_plus.setObjectName("StepMiniBtn")
+        btn_e_plus.setFixedSize(22, 14)
+        btn_e_plus.setToolTip("เพิ่มเวลาจบของท่อนที่เลือกอยู่ตามจำนวนวินาทีในช่อง")
+        btn_e_plus.clicked.connect(lambda: self.adjust_selected_time("end", 1))
+        btn_e_minus = QPushButton("-")
+        btn_e_minus.setObjectName("StepMiniBtn")
+        btn_e_minus.setFixedSize(22, 14)
+        btn_e_minus.setToolTip("ลดเวลาจบของท่อนที่เลือกอยู่ตามจำนวนวินาทีในช่อง")
+        btn_e_minus.clicked.connect(lambda: self.adjust_selected_time("end", -1))
+        e_btn_col.addWidget(btn_e_plus)
+        e_btn_col.addWidget(btn_e_minus)
+        top_tool_1.addLayout(e_btn_col)
+
         lbl_unit_e = QLabel("วิ")
-        lbl_unit_e.setStyleSheet("color: #0F172A;")
+        lbl_unit_e.setStyleSheet("color: #0F172A; font-size: 14px;")
         top_tool_1.addWidget(lbl_unit_e)
 
         top_tool_1.addStretch()
@@ -1018,16 +1021,20 @@ class SermonTranscriberApp(QMainWindow):
         self.table.setHorizontalHeaderLabels([
             "สถานะ", "ลำดับ", "เวลาเริ่ม", "เวลาจบ", "ความยาว", "ชนิด", "ข้อความคำพูด / รายละเอียดคำเทศน์"
         ])
-        self.table.horizontalHeader().setSectionResizeMode(self.COL_CHECK, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(self.COL_NO, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(self.COL_START, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(self.COL_END, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(self.COL_DUR, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(self.COL_CAT, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(self.COL_TEXT, QHeaderView.ResizeMode.Stretch)
+        hdr = self.table.horizontalHeader()
+        hdr.setSectionResizeMode(self.COL_CHECK, QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(self.COL_NO, QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(self.COL_START, QHeaderView.ResizeMode.Interactive)
+        hdr.setSectionResizeMode(self.COL_END, QHeaderView.ResizeMode.Interactive)
+        hdr.setSectionResizeMode(self.COL_DUR, QHeaderView.ResizeMode.Interactive)
+        hdr.setSectionResizeMode(self.COL_CAT, QHeaderView.ResizeMode.Interactive)
+        hdr.setSectionResizeMode(self.COL_TEXT, QHeaderView.ResizeMode.Stretch)
+        self.table.setColumnWidth(self.COL_START, 115)
+        self.table.setColumnWidth(self.COL_END, 115)
+        self.table.setColumnWidth(self.COL_DUR, 95)
+        self.table.setColumnWidth(self.COL_CAT, 105)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        # ปิดการเข้าโหมดแก้ไขเมื่อดับเบิลคลิก เพื่อให้ดับเบิลคลิกใช้ติ๊กเลือกได้เลย (ยังกด F2 เพื่อแก้เวลา/ข้อความได้)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.EditKeyPressed)
         self.table.setWordWrap(True)
         self.table.verticalHeader().setVisible(False)
@@ -1121,7 +1128,6 @@ class SermonTranscriberApp(QMainWindow):
         self.lbl_player_now.setStyleSheet("color: #1E3A5F; font-weight: bold; font-size: 12px;")
         g2_layout.addWidget(self.lbl_player_now)
 
-        # แถบเลื่อนเวลา (Slider) + เวลา
         slider_row = QHBoxLayout()
         self.lbl_time_cur = QLabel("00:00:00")
         self.lbl_time_cur.setStyleSheet("font-weight: normal; font-size: 11px;")
@@ -1137,7 +1143,6 @@ class SermonTranscriberApp(QMainWindow):
         slider_row.addWidget(self.lbl_time_tot)
         g2_layout.addLayout(slider_row)
 
-        # ปุ่มหลัก: ฟังต่อกัน 2 แบบ (ทั้งหมดที่ติ๊ก vs เฉพาะที่เลือกอยู่ปัจจุบัน)
         play_mode_row = QHBoxLayout()
         self.btn_play_queue = QPushButton("▶ ฟังที่ติ๊กทั้งหมด")
         self.btn_play_queue.setObjectName("PrimaryBtn")
@@ -1155,7 +1160,6 @@ class SermonTranscriberApp(QMainWindow):
         play_mode_row.addWidget(self.btn_play_selected, 1)
         g2_layout.addLayout(play_mode_row)
 
-        # แถบปุ่มควบคุม: ก่อนหน้า / พัก-เล่นต่อ / หยุด / ถัดไป
         ctrl_row = QHBoxLayout()
         self.btn_prev_seg = QPushButton("⏮ ก่อนหน้า")
         self.btn_prev_seg.setEnabled(False)
@@ -1178,18 +1182,6 @@ class SermonTranscriberApp(QMainWindow):
         ctrl_row.addWidget(self.btn_stop_player)
         ctrl_row.addWidget(self.btn_next_seg)
         g2_layout.addLayout(ctrl_row)
-
-        # แถวปรับระดับเสียง
-        sub_ctrl_row = QHBoxLayout()
-        sub_ctrl_row.addStretch()
-        sub_ctrl_row.addWidget(QLabel("เสียง:"))
-        self.slider_vol = QSlider(Qt.Orientation.Horizontal)
-        self.slider_vol.setRange(0, 100)
-        self.slider_vol.setValue(100)
-        self.slider_vol.setFixedWidth(120)
-        self.slider_vol.valueChanged.connect(lambda v: self.audio_output.setVolume(v / 100.0))
-        sub_ctrl_row.addWidget(self.slider_vol)
-        g2_layout.addLayout(sub_ctrl_row)
 
         right_layout.addWidget(grp_player)
 
@@ -1279,47 +1271,90 @@ class SermonTranscriberApp(QMainWindow):
         bottom_layout.addWidget(lbl_tip)
         main_vbox.addWidget(bottom_frame)
 
-    # ---------- ฟังก์ชันช่วยติ๊ก/ยกเลิกติ๊ก + ลงสี ----------
-    def apply_check_and_color(self, rows, check_state, cat_id=None):
-        """ตั้งค่า checked และชนิดสีให้ชุดแถวที่ระบุ"""
-        if not rows:
+    # ---------- ฟังก์ชันเปลี่ยนชนิด + ติ๊ก/ยกเลิกติ๊ก ----------
+    def apply_category_to_rows(self, rows, cat_id, update_check=None):
+        """เปลี่ยนชนิดและสีของแถวที่ระบุทันที (ใช้ได้ทั้งแถวเดียวและหลายแถวที่ไฮไลต์อยู่)"""
+        if not rows or not cat_id:
             return
-        if check_state:
-            if not cat_id:
-                cat_id = self.combo_batch_cat.currentData() or self.categories[0]["id"]
-            cat = self.get_category_by_id(cat_id)
-        else:
-            # เวลายกเลิกติ๊ก ให้คืนเป็นชนิดเริ่มต้น (สีเดิม)
-            cat = self.categories[0]
-            cat_id = cat["id"]
-
+        cat = self.get_category_by_id(cat_id)
         self._is_updating_table = True
+        changed_count = 0
         for r in rows:
             if 0 <= r < len(self.transcript_data):
-                self.transcript_data[r]["checked"] = check_state
-                self.transcript_data[r]["cat_id"] = cat_id
-                chk_cell = self.table.item(r, self.COL_CHECK)
-                if chk_cell:
-                    chk_cell.setCheckState(Qt.CheckState.Checked if check_state else Qt.CheckState.Unchecked)
+                self.transcript_data[r]["cat_id"] = cat["id"]
+                if update_check is not None:
+                    self.transcript_data[r]["checked"] = bool(update_check)
+                    chk_cell = self.table.item(r, self.COL_CHECK)
+                    if chk_cell:
+                        chk_cell.setCheckState(
+                            Qt.CheckState.Checked if update_check else Qt.CheckState.Unchecked
+                        )
                 cat_cell = self.table.item(r, self.COL_CAT)
                 if cat_cell:
                     cat_cell.setText(cat["name"])
                 self.apply_row_color(r, cat["color"])
+                changed_count += 1
+        self._is_updating_table = False
+        self.update_bottom_status()
+        if changed_count > 0:
+            self.lbl_progress_status.setText(
+                f"เปลี่ยน {changed_count} ท่อนที่ไฮไลต์เป็นชนิด '{cat['name']}' แล้ว"
+            )
+
+    def on_combo_category_activated(self, index):
+        """เมื่อเลือกชนิดในช่อง ชนิด: ให้เปลี่ยนแถวที่กำลังไฮไลต์อยู่ทันที"""
+        if index < 0:
+            return
+        target_cat_id = self.combo_batch_cat.itemData(index)
+        if not target_cat_id:
+            return
+        highlighted_rows = sorted(set(
+            idx.row() for idx in self.table.selectedIndexes()
+            if 0 <= idx.row() < len(self.transcript_data)
+        ))
+        if not highlighted_rows and 0 <= self.current_row < len(self.transcript_data):
+            highlighted_rows = [self.current_row]
+        if highlighted_rows:
+            self.apply_category_to_rows(highlighted_rows, target_cat_id)
+
+    def apply_check_and_color(self, rows, check_state, cat_id=None):
+        """ตั้งค่า checked โดยคงชนิดและสีเดิมไว้เสมอ"""
+        if not rows:
+            return
+        self._is_updating_table = True
+        last_cat_name = ""
+        for r in rows:
+            if 0 <= r < len(self.transcript_data):
+                self.transcript_data[r]["checked"] = check_state
+                chk_cell = self.table.item(r, self.COL_CHECK)
+                if chk_cell:
+                    chk_cell.setCheckState(Qt.CheckState.Checked if check_state else Qt.CheckState.Unchecked)
+
+                if check_state and cat_id:
+                    cat = self.get_category_by_id(cat_id)
+                    self.transcript_data[r]["cat_id"] = cat["id"]
+                else:
+                    cat = self.get_category_by_id(
+                        self.transcript_data[r].get("cat_id", self.categories[0]["id"])
+                    )
+                cat_cell = self.table.item(r, self.COL_CAT)
+                if cat_cell:
+                    cat_cell.setText(cat["name"])
+                self.apply_row_color(r, cat["color"])
+                last_cat_name = cat["name"]
         self._is_updating_table = False
         self.update_bottom_status()
 
         if check_state:
-            self.lbl_progress_status.setText(f"ติ๊กเลือก {len(rows)} ท่อน เป็นชนิด '{cat['name']}' แล้ว")
+            self.lbl_progress_status.setText(f"ติ๊กเลือก {len(rows)} ท่อนแล้ว")
         else:
-            self.lbl_progress_status.setText(f"ยกเลิกการเลือก {len(rows)} ท่อนแล้ว")
+            self.lbl_progress_status.setText(f"ยกเลิกการเลือก {len(rows)} ท่อนแล้ว (คงชนิดและสีเดิมไว้)")
 
-    # จัดการ Spacebar (Toggle ติ๊ก/ยกเลิก) และ คลิกขวา (ติ๊กเพิ่ม)
     def eventFilter(self, obj, event):
         if obj is self.table and event.type() == QEvent.Type.KeyPress:
             if event.key() == Qt.Key.Key_Space:
                 selected_rows = sorted(set(idx.row() for idx in self.table.selectedIndexes()))
                 if selected_rows:
-                    # ถ้าทุกแถวที่ไฮไลต์อยู่ถูกติ๊กไว้แล้ว -> ให้ยกเลิกการเลือกทั้งหมด
                     all_already_checked = all(
                         self.transcript_data[r].get("checked", False)
                         for r in selected_rows if 0 <= r < len(self.transcript_data)
@@ -1330,7 +1365,6 @@ class SermonTranscriberApp(QMainWindow):
                         self.apply_check_and_color(selected_rows, True)
                 return True
 
-        # คลิกขวาบนตาราง -> ติ๊กเพิ่มแถวที่คลิก (หรือทั้งหมดที่ไฮไลต์อยู่หากคลิกขวาในกลุ่มที่เลือก)
         if obj is self.table.viewport() and event.type() == QEvent.Type.MouseButtonPress:
             if event.button() == Qt.MouseButton.RightButton:
                 pos = event.position().toPoint()
@@ -1380,9 +1414,20 @@ class SermonTranscriberApp(QMainWindow):
             self.btn_glossary.setText(f"📖 คลังคำศัพท์เฉพาะทางพระพุทธศาสนา ({len(self.glossary_words)} คำ)")
             self.lbl_progress_status.setText(f"บันทึกคลังคำศัพท์แล้ว ({len(self.glossary_words)} คำ)")
 
+    def adjust_time_columns_width(self):
+        fm = self.table.fontMetrics()
+        time_w = fm.horizontalAdvance("00:00:00.0") + 28
+        dur_w = fm.horizontalAdvance("00:00:00") + 24
+        cat_w = max(95, fm.horizontalAdvance("เนื้อเรื่อง") + 32)
+        self.table.setColumnWidth(self.COL_START, max(105, time_w))
+        self.table.setColumnWidth(self.COL_END, max(105, time_w))
+        self.table.setColumnWidth(self.COL_DUR, max(85, dur_w))
+        self.table.setColumnWidth(self.COL_CAT, cat_w)
+
     def apply_font_size(self):
         font = QFont("Tahoma", self.font_size)
         self.table.setFont(font)
+        self.adjust_time_columns_width()
         self.table.resizeRowsToContents()
         self.lbl_font.setText(f"ฟอนต์: ({self.font_size} pt)")
 
@@ -1545,7 +1590,6 @@ class SermonTranscriberApp(QMainWindow):
             with open(file_path, "r", encoding="utf-8") as f:
                 payload = json.load(f)
 
-            # รวมชนิดเนื้อเรื่องจากโปรเจกต์เข้ากับที่มีอยู่โดยไม่ลบทับชนิดสีที่ตั้งไว้ถาวร
             loaded_cats = payload.get("categories")
             if isinstance(loaded_cats, list):
                 existing_ids = {c["id"] for c in self.categories}
@@ -1644,6 +1688,7 @@ class SermonTranscriberApp(QMainWindow):
 
             self.apply_row_color(row, cat["color"])
 
+        self.adjust_time_columns_width()
         self.table.resizeRowsToContents()
         self._is_updating_table = False
         self.filter_table_by_search(self.txt_search.text())
@@ -1669,10 +1714,8 @@ class SermonTranscriberApp(QMainWindow):
                 self.table.setRowHidden(row, not match)
 
     def get_padded_bounds(self, item):
-        pad_s = max(0.0, float(self.spin_pad_start.value()))
-        pad_e = max(0.0, float(self.spin_pad_end.value()))
-        start = max(0.0, float(item["start"]) - pad_s)
-        end = float(item["end"]) + pad_e
+        start = max(0.0, float(item["start"]))
+        end = float(item["end"])
         if self.audio_duration > 0:
             end = min(end, self.audio_duration)
         end = max(start + 0.05, end)
@@ -1693,24 +1736,14 @@ class SermonTranscriberApp(QMainWindow):
 
     def set_all_checks(self, checked):
         rows = [r for r in range(len(self.transcript_data)) if not self.table.isRowHidden(r)]
-        if checked:
-            self._is_updating_table = True
-            for r in rows:
-                self.transcript_data[r]["checked"] = True
-                cell = self.table.item(r, self.COL_CHECK)
-                if cell:
-                    cell.setCheckState(Qt.CheckState.Checked)
-            self._is_updating_table = False
-            self.update_bottom_status()
-        else:
-            self._is_updating_table = True
-            for r in rows:
-                self.transcript_data[r]["checked"] = False
-                cell = self.table.item(r, self.COL_CHECK)
-                if cell:
-                    cell.setCheckState(Qt.CheckState.Unchecked)
-            self._is_updating_table = False
-            self.update_bottom_status()
+        self._is_updating_table = True
+        for r in rows:
+            self.transcript_data[r]["checked"] = checked
+            cell = self.table.item(r, self.COL_CHECK)
+            if cell:
+                cell.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
+        self._is_updating_table = False
+        self.update_bottom_status()
 
     def invert_checks(self):
         self._is_updating_table = True
@@ -1724,16 +1757,6 @@ class SermonTranscriberApp(QMainWindow):
                 cell.setCheckState(Qt.CheckState.Checked if new_val else Qt.CheckState.Unchecked)
         self._is_updating_table = False
         self.update_bottom_status()
-
-    def apply_category_to_checked(self):
-        target_cat_id = self.combo_batch_cat.currentData()
-        if not target_cat_id:
-            return
-        checked_rows = [r for r, item in enumerate(self.transcript_data) if item.get("checked")]
-        if not checked_rows:
-            QMessageBox.information(self, "แจ้งเตือน", "กรุณาติ๊กเลือกท่อนที่ต้องการเปลี่ยนชนิดก่อนครับ")
-            return
-        self.apply_check_and_color(checked_rows, True, target_cat_id)
 
     def check_rows_by_category(self):
         target_cat_id = self.combo_batch_cat.currentData()
@@ -1797,7 +1820,7 @@ class SermonTranscriberApp(QMainWindow):
         new_item = {
             "start": round(default_start, 2),
             "end": round(default_end, 2),
-            "text": "(ท่อนที่เพิ่มเอง — ดับเบิลคลิกหรือกด F2 เพื่อแก้เวลาและข้อความ)",
+            "text": "(ท่อนที่เพิ่มเอง — กด F2 เพื่อแก้เวลาและข้อความ)",
             "cat_id": target_cat_id,
             "checked": True
         }
@@ -1826,62 +1849,57 @@ class SermonTranscriberApp(QMainWindow):
             return [self.current_row]
         return []
 
-    def on_adjust_start_time_step(self, new_val):
-        delta = round(float(new_val) - self._last_pad_start_val, 3)
-        self._last_pad_start_val = float(new_val)
-        if abs(delta) < 1e-6:
-            return
+    def _parse_step_seconds(self, widget):
+        thai_digits = str.maketrans("๐๑๒๓๔๕๖๗๘๙", "0123456789")
+        raw = widget.text().strip().translate(thai_digits)
+        try:
+            val = abs(float(raw))
+            if val <= 0:
+                val = 1.0
+                widget.setText("1")
+            return val
+        except ValueError:
+            widget.setText("1")
+            return 1.0
+
+    def adjust_selected_time(self, field, direction):
+        """นำค่าที่ฟิกซ์ไว้ในช่อง เริ่ม/จบ ไปบวก (+) หรือลบ (-) กับเวลาของท่อนที่เลือกอยู่ทันที"""
+        step = self._parse_step_seconds(self.txt_step_start if field == "start" else self.txt_step_end)
+        delta = round(step * direction, 2)
         target_rows = self._get_target_rows_for_time_edit()
         if not target_rows:
-            self.update_bottom_status()
+            QMessageBox.information(self, "ยังไม่ได้เลือกท่อน", "กรุณาคลิกเลือกแถวในตารางก่อนกดปุ่ม + หรือ - ครับ")
             return
 
         self._is_updating_table = True
         for r in target_rows:
             item = self.transcript_data[r]
-            updated_start = max(0.0, round(float(item["start"]) + delta, 2))
-            if updated_start > float(item["end"]) - 0.05:
-                updated_start = max(0.0, round(float(item["end"]) - 0.05, 2))
-            item["start"] = updated_start
+            if field == "start":
+                updated_start = max(0.0, round(float(item["start"]) + delta, 2))
+                if updated_start > float(item["end"]) - 0.05:
+                    updated_start = max(0.0, round(float(item["end"]) - 0.05, 2))
+                item["start"] = updated_start
+                if self.table.item(r, self.COL_START):
+                    self.table.item(r, self.COL_START).setText(format_hms(item["start"], show_decimal=True))
+            else:
+                updated_end = max(float(item["start"]) + 0.05, round(float(item["end"]) + delta, 2))
+                if self.audio_duration > 0:
+                    updated_end = min(updated_end, round(self.audio_duration, 2))
+                item["end"] = updated_end
+                if self.table.item(r, self.COL_END):
+                    self.table.item(r, self.COL_END).setText(format_hms(item["end"], show_decimal=True))
+
             dur = max(0.0, float(item["end"]) - float(item["start"]))
-            if self.table.item(r, self.COL_START):
-                self.table.item(r, self.COL_START).setText(format_hms(item["start"], show_decimal=True))
             if self.table.item(r, self.COL_DUR):
                 self.table.item(r, self.COL_DUR).setText(format_hms(dur, show_decimal=False))
+
         self._is_updating_table = False
         self.update_bottom_status()
-        action_word = "เพิ่ม" if delta > 0 else "ลด"
+        action_word = "เพิ่ม" if direction > 0 else "ลด"
+        field_label = "เริ่ม" if field == "start" else "จบ"
+        step_disp = int(step) if step.is_integer() else step
         self.lbl_progress_status.setText(
-            f"{action_word}เวลา [เริ่ม] {abs(delta):.1f} วิ ให้ท่อนที่เลือก ({len(target_rows)} ท่อน) แล้ว"
-        )
-
-    def on_adjust_end_time_step(self, new_val):
-        delta = round(float(new_val) - self._last_pad_end_val, 3)
-        self._last_pad_end_val = float(new_val)
-        if abs(delta) < 1e-6:
-            return
-        target_rows = self._get_target_rows_for_time_edit()
-        if not target_rows:
-            self.update_bottom_status()
-            return
-
-        self._is_updating_table = True
-        for r in target_rows:
-            item = self.transcript_data[r]
-            updated_end = max(float(item["start"]) + 0.05, round(float(item["end"]) + delta, 2))
-            if self.audio_duration > 0:
-                updated_end = min(updated_end, round(self.audio_duration, 2))
-            item["end"] = updated_end
-            dur = max(0.0, float(item["end"]) - float(item["start"]))
-            if self.table.item(r, self.COL_END):
-                self.table.item(r, self.COL_END).setText(format_hms(item["end"], show_decimal=True))
-            if self.table.item(r, self.COL_DUR):
-                self.table.item(r, self.COL_DUR).setText(format_hms(dur, show_decimal=False))
-        self._is_updating_table = False
-        self.update_bottom_status()
-        action_word = "เพิ่ม" if delta > 0 else "ลด"
-        self.lbl_progress_status.setText(
-            f"{action_word}เวลา [จบ] {abs(delta):.1f} วิ ให้ท่อนที่เลือก ({len(target_rows)} ท่อน) แล้ว"
+            f"{action_word}เวลา [{field_label}] {step_disp} วิ ให้ท่อนที่เลือก ({len(target_rows)} ท่อน) แล้ว"
         )
 
     def delete_selected_segments(self):
@@ -1920,7 +1938,6 @@ class SermonTranscriberApp(QMainWindow):
             self.current_row = row
 
     def on_table_double_clicked(self, row, column):
-        # ดับเบิลคลิกที่แถว -> ติ๊กเพิ่มแถวนี้เป็นชนิดที่โฟกัสอยู่
         if 0 <= row < len(self.transcript_data):
             self.current_row = row
             self.apply_check_and_color([row], True)
@@ -2060,7 +2077,6 @@ class SermonTranscriberApp(QMainWindow):
             self.slider_pos.setValue(position_ms)
         self.lbl_time_cur.setText(format_hms(position_ms / 1000.0))
 
-        # ตรวจสอบว่าเล่นจบช่วงท่อนปัจจุบันในคิวแล้วหรือยัง -> กระโดดไปท่อนถัดไปอัตโนมัติ
         if self.play_queue and 0 <= self.play_queue_idx < len(self.play_queue):
             if self.active_seg_end_ms > 0 and position_ms >= self.active_seg_end_ms:
                 next_idx = self.play_queue_idx + 1
@@ -2123,8 +2139,8 @@ class SermonTranscriberApp(QMainWindow):
             base_name,
             fmt,
             mode,
-            pad_start=max(0.0, float(self.spin_pad_start.value())),
-            pad_end=max(0.0, float(self.spin_pad_end.value())),
+            pad_start=0.0,
+            pad_end=0.0,
             max_duration=self.audio_duration if self.audio_duration > 0 else None,
         )
         self.audio_export_thread.progress.connect(lambda msg: self.lbl_progress_status.setText(msg))
