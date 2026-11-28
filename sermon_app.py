@@ -603,7 +603,7 @@ class AudioExportThread(QThread):
             self.error.emit(str(e))
 
 
-# 4. หน้าต่างหลักของโปรแกรม (GPU Edition v12)
+# 4. หน้าต่างหลักของโปรแกรม
 class SermonTranscriberApp(QMainWindow):
     COL_CHECK = 0
     COL_NO = 1
@@ -615,7 +615,7 @@ class SermonTranscriberApp(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Sermon Timestamp Transcriber & Cutter (GPU Edition v12)")
+        self.setWindowTitle("Sermon Timestamp Transcriber & Cutter")
         self.resize(1400, 830)
 
         self.audio_path = None
@@ -631,6 +631,7 @@ class SermonTranscriberApp(QMainWindow):
         # สถานะสำหรับ Media Player เล่นท่อนที่เลือกต่อกัน
         self.play_queue = []        # ลิสต์ของ index แถวใน transcript_data ที่จะเล่นต่อกัน
         self.play_queue_idx = -1    # ตำแหน่งปัจจุบันใน play_queue
+        self.play_mode_label = ""   # ชื่อโหมดที่กำลังเล่น (ที่ติ๊กทั้งหมด / เฉพาะที่เลือกอยู่)
         self.active_seg_start_ms = 0
         self.active_seg_end_ms = 0
 
@@ -694,6 +695,15 @@ class SermonTranscriberApp(QMainWindow):
             }
             QPushButton#PrimaryBtn:hover {
                 background-color: #163B5C;
+            }
+            QPushButton#TealBtn {
+                background-color: #0284C7;
+                color: #FFFFFF;
+                border: none;
+                font-weight: bold;
+            }
+            QPushButton#TealBtn:hover {
+                background-color: #0369A1;
             }
             QPushButton#PurpleBtn {
                 background-color: #7E22CE;
@@ -905,7 +915,7 @@ class SermonTranscriberApp(QMainWindow):
         top_tool_1.addWidget(btn_apply_cat)
         top_tool_1.addWidget(btn_check_cat)
 
-        # ช่องปรับเผื่อเวลา เริ่ม / จบ (แบบในภาพตัวอย่าง ต่อจากติ๊กเฉพาะชนิดนี้)
+        # ช่องปรับเผื่อเวลา เริ่ม / จบ (ต่อจากติ๊กเฉพาะชนิดนี้)
         top_tool_1.addSpacing(6)
         top_tool_1.addWidget(QLabel("เริ่ม:"))
         self.spin_pad_start = QDoubleSpinBox()
@@ -1058,12 +1068,23 @@ class SermonTranscriberApp(QMainWindow):
         slider_row.addWidget(self.lbl_time_tot)
         g2_layout.addLayout(slider_row)
 
-        # ปุ่มหลัก: ฟังท่อนที่ติ๊กต่อกัน
-        self.btn_play_queue = QPushButton("▶ ฟังท่อนที่ติ๊กเลือกต่อๆ กัน (พรีวิวก่อน Export)")
+        # ปุ่มหลัก: ฟังต่อกัน 2 แบบ (ทั้งหมดที่ติ๊ก vs เฉพาะที่เลือกอยู่ปัจจุบัน)
+        play_mode_row = QHBoxLayout()
+        self.btn_play_queue = QPushButton("▶ ฟังที่ติ๊กทั้งหมด")
         self.btn_play_queue.setObjectName("PrimaryBtn")
+        self.btn_play_queue.setToolTip("พรีวิวเล่นท่อนที่ติ๊กถูกไว้ทั้งหมดเรียงต่อกันตั้งแต่ต้นจนจบ")
         self.btn_play_queue.setEnabled(False)
         self.btn_play_queue.clicked.connect(self.play_checked_sequentially)
-        g2_layout.addWidget(self.btn_play_queue)
+
+        self.btn_play_selected = QPushButton("▶ ฟังเฉพาะที่เลือกอยู่")
+        self.btn_play_selected.setObjectName("TealBtn")
+        self.btn_play_selected.setToolTip("พรีวิวเล่นต่อกันเฉพาะท่อนที่ไฮไลต์แถบสีฟ้าอยู่ในตารางขณะนี้ (คลิก / Shift / Ctrl)")
+        self.btn_play_selected.setEnabled(False)
+        self.btn_play_selected.clicked.connect(self.play_selected_rows_sequentially)
+
+        play_mode_row.addWidget(self.btn_play_queue, 1)
+        play_mode_row.addWidget(self.btn_play_selected, 1)
+        g2_layout.addLayout(play_mode_row)
 
         # แถบปุ่มควบคุม: ก่อนหน้า / พัก-เล่นต่อ / หยุด / ถัดไป
         ctrl_row = QHBoxLayout()
@@ -1312,6 +1333,7 @@ class SermonTranscriberApp(QMainWindow):
 
     def set_player_controls_enabled(self, enabled):
         self.btn_play_queue.setEnabled(enabled)
+        self.btn_play_selected.setEnabled(enabled)
         self.btn_prev_seg.setEnabled(enabled)
         self.btn_pause_resume.setEnabled(enabled)
         self.btn_stop_player.setEnabled(enabled)
@@ -1732,12 +1754,32 @@ class SermonTranscriberApp(QMainWindow):
             return
         queue = [i for i, item in enumerate(self.transcript_data) if item.get("checked")]
         if not queue:
-            # ถ้ายังไม่ได้ติ๊ก ลองดึงจากแถวที่ไฮไลต์สีฟ้าอยู่
-            queue = sorted(set(idx.row() for idx in self.table.selectedIndexes()))
-        if not queue:
-            QMessageBox.information(self, "ยังไม่ได้เลือกท่อน", "กรุณาติ๊กเลือกหรือคลิกเลือกท่อนที่ต้องการฟังก่อนครับ")
+            QMessageBox.information(self, "ยังไม่ได้ติ๊กเลือกท่อน", "กรุณาติ๊กเลือกท่อนที่ต้องการฟังทั้งหมดก่อนครับ")
             return
 
+        self.play_mode_label = "ที่ติ๊กทั้งหมด"
+        self.play_queue = queue
+        self.play_queue_idx = 0
+        self._start_queue_item(0)
+
+    def play_selected_rows_sequentially(self):
+        if not self.audio_path or not self.transcript_data:
+            return
+        queue = sorted(set(
+            idx.row() for idx in self.table.selectedIndexes()
+            if 0 <= idx.row() < len(self.transcript_data)
+        ))
+        if not queue and 0 <= self.current_row < len(self.transcript_data):
+            queue = [self.current_row]
+        if not queue:
+            QMessageBox.information(
+                self,
+                "ยังไม่ได้เลือกท่อน",
+                "กรุณาคลิกเลือก หรือกด Shift/Ctrl ไฮไลต์ท่อนที่ต้องการฟังในตารางก่อนครับ"
+            )
+            return
+
+        self.play_mode_label = "เฉพาะที่เลือกอยู่"
         self.play_queue = queue
         self.play_queue_idx = 0
         self._start_queue_item(0)
@@ -1752,6 +1794,7 @@ class SermonTranscriberApp(QMainWindow):
         if not (0 <= row < len(self.transcript_data)):
             QMessageBox.information(self, "ยังไม่ได้เลือกท่อน", "กรุณาคลิกเลือกแถวในตารางก่อนครับ")
             return
+        self.play_mode_label = "เฉพาะแถวที่คลิก"
         self.play_queue = [row]
         self.play_queue_idx = 0
         self._start_queue_item(0)
@@ -1774,8 +1817,9 @@ class SermonTranscriberApp(QMainWindow):
         self.current_row = row_idx
 
         preview_text = item["text"][:45] + ("..." if len(item["text"]) > 45 else "")
+        mode_prefix = f"[{self.play_mode_label}] " if self.play_mode_label else ""
         self.lbl_player_now.setText(
-            f"▶ กำลังเล่นท่อนที่ {q_idx + 1} / {len(self.play_queue)} (ลำดับ #{row_idx + 1}): {preview_text}"
+            f"▶ {mode_prefix}ท่อนที่ {q_idx + 1} / {len(self.play_queue)} (ลำดับ #{row_idx + 1}): {preview_text}"
         )
 
         self.player.setPosition(self.active_seg_start_ms)
