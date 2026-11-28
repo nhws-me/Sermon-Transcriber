@@ -628,7 +628,6 @@ class SermonTranscriberApp(QMainWindow):
         self._is_updating_table = False
         self._is_slider_dragging = False
 
-        # สถานะสำหรับ Media Player เล่นท่อนที่เลือกต่อกัน
         self.play_queue = []
         self.play_queue_idx = -1
         self.play_mode_label = ""
@@ -637,7 +636,6 @@ class SermonTranscriberApp(QMainWindow):
 
         self.output_folder = os.path.join(os.path.expanduser("~"), "Downloads", "Sermon_Cut_Outputs")
 
-        # ตัวเล่นเสียง
         self.player = QMediaPlayer()
         self.audio_output = QAudioOutput()
         self.player.setAudioOutput(self.audio_output)
@@ -861,7 +859,6 @@ class SermonTranscriberApp(QMainWindow):
         main_vbox.setContentsMargins(10, 8, 10, 6)
         main_vbox.setSpacing(6)
 
-        # ================= แถบหัวโปรแกรมด้านบนสุด =================
         header_bar = QHBoxLayout()
         title_lbl = QLabel("Sermon Timestamp Transcriber & Cutter")
         title_lbl.setStyleSheet("font-size: 17px; font-weight: bold; color: #0F172A;")
@@ -892,16 +889,13 @@ class SermonTranscriberApp(QMainWindow):
         header_bar.addWidget(self.btn_font_plus)
         main_vbox.addLayout(header_bar)
 
-        # ================= พื้นที่ตรงกลาง: ซ้าย (ตารางบทถอดความ) | ขวา (แถบจัดการ) =================
         splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        # ---------- ฝั่งซ้าย: แถบควบคุมด้านบน + ตารางบทถอดความ ----------
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 4, 0)
         left_layout.setSpacing(5)
 
-        # แถบเครื่องมือด้านบนตาราง
         top_tool_1 = QHBoxLayout()
         top_tool_1.setSpacing(5)
         btn_all = QPushButton("[✓] ทั้งหมด")
@@ -916,11 +910,11 @@ class SermonTranscriberApp(QMainWindow):
         btn_merge_rows.clicked.connect(self.merge_checked_rows)
 
         self.btn_add_segment = QPushButton("+ เพิ่มท่อนเนื้อเรื่อง")
-        self.btn_add_segment.setToolTip("เพิ่มท่อนเนื้อเรื่องใหม่ด้วยตัวเอง (เช่น แทรกหรือเพิ่มช่วงเวลาที่ต้องการปรับเสียงเอง)")
+        self.btn_add_segment.setToolTip("เพิ่มท่อนเนื้อเรื่องใหม่ด้วยตัวเอง")
         self.btn_add_segment.clicked.connect(self.add_custom_segment)
 
         self.btn_del_segment = QPushButton("- ลบท่อนเนื้อเรื่อง")
-        self.btn_del_segment.setToolTip("ลบท่อนเนื้อเรื่องที่ไฮไลต์เลือกอยู่ (หรือท่อนที่ติ๊กเลือกไว้)")
+        self.btn_del_segment.setToolTip("ลบท่อนเนื้อเรื่องที่ไฮไลต์เลือกอยู่")
         self.btn_del_segment.clicked.connect(self.delete_selected_segments)
 
         top_tool_1.addWidget(btn_all)
@@ -934,10 +928,9 @@ class SermonTranscriberApp(QMainWindow):
         top_tool_1.addWidget(QLabel("ชนิด:"))
         self.combo_batch_cat = QComboBox()
         self.combo_batch_cat.setMinimumWidth(110)
-        self.combo_batch_cat.setToolTip("ไฮไลต์แถวที่ต้องการ (แถวเดียวหรือหลายแถวด้วย Shift/Ctrl) แล้วเลือกชนิดที่นี่เพื่อเปลี่ยนทันที")
+        self.combo_batch_cat.setToolTip("ไฮไลต์แถวที่ต้องการแล้วเลือกชนิดที่นี่เพื่อเปลี่ยนทันที")
         self.combo_batch_cat.activated.connect(self.on_combo_category_activated)
         self.btn_manage_cat = QPushButton("🎨 ชนิด/สี")
-        self.btn_manage_cat.setToolTip("จัดการเพิ่ม/แก้ไขชื่อและสีของชนิดเนื้อเรื่อง")
         self.btn_manage_cat.clicked.connect(self.open_category_manager)
 
         btn_check_cat = QPushButton("ติ๊กเฉพาะชนิดนี้")
@@ -947,7 +940,6 @@ class SermonTranscriberApp(QMainWindow):
         top_tool_1.addWidget(self.btn_manage_cat)
         top_tool_1.addWidget(btn_check_cat)
 
-        # ช่องปรับเวลา เริ่ม / จบ (ใส่ค่าก้าวกระโดดฟิกซ์ไว้เอง เช่น 1, 2, 3 แล้วกด + หรือ - เพื่อปรับเวลาท่อนที่เลือกทันที)
         top_tool_1.addSpacing(6)
         lbl_pad_s = QLabel("เริ่ม:")
         lbl_pad_s.setStyleSheet("color: #1E3A5F; font-size: 14px; font-weight: bold;")
@@ -957,7 +949,6 @@ class SermonTranscriberApp(QMainWindow):
         self.txt_step_start.setObjectName("StepInput")
         self.txt_step_start.setFixedWidth(44)
         self.txt_step_start.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.txt_step_start.setToolTip("พิมพ์จำนวนวินาทีที่ต้องการเพิ่ม/ลดฟิกซ์ไว้ (เช่น 1, 2, 3) แล้วกดปุ่ม + หรือ - ด้านข้าง")
         top_tool_1.addWidget(self.txt_step_start)
 
         s_btn_col = QVBoxLayout()
@@ -966,12 +957,10 @@ class SermonTranscriberApp(QMainWindow):
         btn_s_plus = QPushButton("+")
         btn_s_plus.setObjectName("StepMiniBtn")
         btn_s_plus.setFixedSize(22, 14)
-        btn_s_plus.setToolTip("เพิ่มเวลาเริ่มของท่อนที่เลือกอยู่ตามจำนวนวินาทีในช่อง")
         btn_s_plus.clicked.connect(lambda: self.adjust_selected_time("start", 1))
         btn_s_minus = QPushButton("-")
         btn_s_minus.setObjectName("StepMiniBtn")
         btn_s_minus.setFixedSize(22, 14)
-        btn_s_minus.setToolTip("ลดเวลาเริ่มของท่อนที่เลือกอยู่ตามจำนวนวินาทีในช่อง")
         btn_s_minus.clicked.connect(lambda: self.adjust_selected_time("start", -1))
         s_btn_col.addWidget(btn_s_plus)
         s_btn_col.addWidget(btn_s_minus)
@@ -989,7 +978,6 @@ class SermonTranscriberApp(QMainWindow):
         self.txt_step_end.setObjectName("StepInput")
         self.txt_step_end.setFixedWidth(44)
         self.txt_step_end.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.txt_step_end.setToolTip("พิมพ์จำนวนวินาทีที่ต้องการเพิ่ม/ลดฟิกซ์ไว้ (เช่น 1, 2, 3) แล้วกดปุ่ม + หรือ - ด้านข้าง")
         top_tool_1.addWidget(self.txt_step_end)
 
         e_btn_col = QVBoxLayout()
@@ -998,12 +986,10 @@ class SermonTranscriberApp(QMainWindow):
         btn_e_plus = QPushButton("+")
         btn_e_plus.setObjectName("StepMiniBtn")
         btn_e_plus.setFixedSize(22, 14)
-        btn_e_plus.setToolTip("เพิ่มเวลาจบของท่อนที่เลือกอยู่ตามจำนวนวินาทีในช่อง")
         btn_e_plus.clicked.connect(lambda: self.adjust_selected_time("end", 1))
         btn_e_minus = QPushButton("-")
         btn_e_minus.setObjectName("StepMiniBtn")
         btn_e_minus.setFixedSize(22, 14)
-        btn_e_minus.setToolTip("ลดเวลาจบของท่อนที่เลือกอยู่ตามจำนวนวินาทีในช่อง")
         btn_e_minus.clicked.connect(lambda: self.adjust_selected_time("end", -1))
         e_btn_col.addWidget(btn_e_plus)
         e_btn_col.addWidget(btn_e_minus)
@@ -1016,7 +1002,6 @@ class SermonTranscriberApp(QMainWindow):
         top_tool_1.addStretch()
         left_layout.addLayout(top_tool_1)
 
-        # ตารางบทถอดคำพูด
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels([
             "สถานะ", "ลำดับ", "เวลาเริ่ม", "เวลาจบ", "ความยาว", "ชนิด", "ข้อความคำพูด / รายละเอียดคำเทศน์"
@@ -1047,7 +1032,6 @@ class SermonTranscriberApp(QMainWindow):
 
         splitter.addWidget(left_panel)
 
-        # ---------- ฝั่งขวา: แถบจัดการทั้งหมด ----------
         right_scroll = QScrollArea()
         right_scroll.setWidgetResizable(True)
         right_scroll.setFrameShape(QFrame.Shape.NoFrame)
@@ -1059,7 +1043,6 @@ class SermonTranscriberApp(QMainWindow):
         right_layout.setContentsMargins(4, 0, 2, 0)
         right_layout.setSpacing(8)
 
-        # --- กล่อง 1: แหล่งข้อมูล & ถอดเสียง (GPU) ---
         grp_source = QGroupBox("1. แหล่งข้อมูล (ไฟล์เสียงในเครื่อง & GPU)")
         g1_layout = QVBoxLayout(grp_source)
 
@@ -1119,7 +1102,6 @@ class SermonTranscriberApp(QMainWindow):
 
         right_layout.addWidget(grp_source)
 
-        # --- กล่อง 2: มีเดียเพลย์เยอร์ (พรีวิวฟังท่อนที่เลือกต่อกันก่อน Export) ---
         grp_player = QGroupBox("2. มีเดียเพลย์เยอร์ (พรีวิวฟังท่อนที่เลือกต่อกัน)")
         g2_layout = QVBoxLayout(grp_player)
 
@@ -1146,13 +1128,11 @@ class SermonTranscriberApp(QMainWindow):
         play_mode_row = QHBoxLayout()
         self.btn_play_queue = QPushButton("▶ ฟังที่ติ๊กทั้งหมด")
         self.btn_play_queue.setObjectName("PrimaryBtn")
-        self.btn_play_queue.setToolTip("พรีวิวเล่นท่อนที่ติ๊กถูกไว้ทั้งหมดเรียงต่อกันตั้งแต่ต้นจนจบ")
         self.btn_play_queue.setEnabled(False)
         self.btn_play_queue.clicked.connect(self.play_checked_sequentially)
 
         self.btn_play_selected = QPushButton("▶ ฟังเฉพาะที่เลือกอยู่")
         self.btn_play_selected.setObjectName("TealBtn")
-        self.btn_play_selected.setToolTip("พรีวิวเล่นต่อกันเฉพาะท่อนที่ไฮไลต์แถบสีฟ้าอยู่ในตารางขณะนี้ (คลิก / Shift / Ctrl)")
         self.btn_play_selected.setEnabled(False)
         self.btn_play_selected.clicked.connect(self.play_selected_rows_sequentially)
 
@@ -1185,7 +1165,6 @@ class SermonTranscriberApp(QMainWindow):
 
         right_layout.addWidget(grp_player)
 
-        # --- กล่อง 3: รูปแบบไฟล์ & Export ---
         grp_export = QGroupBox("3. รูปแบบไฟล์ & เริ่มตัดรวม (Export)")
         g3_layout = QVBoxLayout(grp_export)
 
@@ -1254,7 +1233,6 @@ class SermonTranscriberApp(QMainWindow):
         splitter.setStretchFactor(1, 3)
         main_vbox.addWidget(splitter, 1)
 
-        # ================= แถบสถานะด้านล่างสุด =================
         bottom_frame = QFrame()
         bottom_frame.setObjectName("BottomBar")
         bottom_layout = QHBoxLayout(bottom_frame)
@@ -1271,9 +1249,7 @@ class SermonTranscriberApp(QMainWindow):
         bottom_layout.addWidget(lbl_tip)
         main_vbox.addWidget(bottom_frame)
 
-    # ---------- ฟังก์ชันเปลี่ยนชนิด + ติ๊ก/ยกเลิกติ๊ก ----------
     def apply_category_to_rows(self, rows, cat_id, update_check=None):
-        """เปลี่ยนชนิดและสีของแถวที่ระบุทันที (ใช้ได้ทั้งแถวเดียวและหลายแถวที่ไฮไลต์อยู่)"""
         if not rows or not cat_id:
             return
         cat = self.get_category_by_id(cat_id)
@@ -1302,7 +1278,6 @@ class SermonTranscriberApp(QMainWindow):
             )
 
     def on_combo_category_activated(self, index):
-        """เมื่อเลือกชนิดในช่อง ชนิด: ให้เปลี่ยนแถวที่กำลังไฮไลต์อยู่ทันที"""
         if index < 0:
             return
         target_cat_id = self.combo_batch_cat.itemData(index)
@@ -1318,11 +1293,9 @@ class SermonTranscriberApp(QMainWindow):
             self.apply_category_to_rows(highlighted_rows, target_cat_id)
 
     def apply_check_and_color(self, rows, check_state, cat_id=None):
-        """ตั้งค่า checked โดยคงชนิดและสีเดิมไว้เสมอ"""
         if not rows:
             return
         self._is_updating_table = True
-        last_cat_name = ""
         for r in rows:
             if 0 <= r < len(self.transcript_data):
                 self.transcript_data[r]["checked"] = check_state
@@ -1341,7 +1314,6 @@ class SermonTranscriberApp(QMainWindow):
                 if cat_cell:
                     cat_cell.setText(cat["name"])
                 self.apply_row_color(r, cat["color"])
-                last_cat_name = cat["name"]
         self._is_updating_table = False
         self.update_bottom_status()
 
@@ -1546,7 +1518,6 @@ class SermonTranscriberApp(QMainWindow):
         self.btn_glossary.setEnabled(True)
         self.btn_import_proj.setEnabled(True)
 
-    # ---------- ระบบ Import / Save โปรเจกต์ ----------
     def write_project_file(self, file_path, silent=False):
         try:
             payload = {
@@ -1647,7 +1618,6 @@ class SermonTranscriberApp(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Import ไม่สำเร็จ", f"ไม่สามารถเปิดไฟล์โปรเจกต์ได้:\n{e}")
 
-    # ---------- การจัดการตาราง ----------
     def rebuild_table_from_data(self):
         self._is_updating_table = True
         self.table.setRowCount(len(self.transcript_data))
@@ -1796,7 +1766,6 @@ class SermonTranscriberApp(QMainWindow):
         self.rebuild_table_from_data()
 
     def add_custom_segment(self):
-        """เพิ่มท่อนเนื้อเรื่องด้วยตัวเอง โดยอิงเวลาจากแถวที่เลือกอยู่หรือเวลาปัจจุบันใน Media Player"""
         default_start = 0.0
         insert_pos = len(self.transcript_data)
 
@@ -1835,7 +1804,7 @@ class SermonTranscriberApp(QMainWindow):
         self.btn_export_text.setEnabled(True)
         self.btn_save_proj.setEnabled(True)
         self.lbl_progress_status.setText(
-            f"เพิ่มท่อนที่ #{insert_pos + 1} ({format_hms(new_item['start'], True)} - {format_hms(new_item['end'], True)}) แล้ว — แก้เวลาได้โดยตรงในตาราง"
+            f"เพิ่มท่อนที่ #{insert_pos + 1} ({format_hms(new_item['start'], True)} - {format_hms(new_item['end'], True)}) แล้ว"
         )
 
     def _get_target_rows_for_time_edit(self):
@@ -1863,7 +1832,6 @@ class SermonTranscriberApp(QMainWindow):
             return 1.0
 
     def adjust_selected_time(self, field, direction):
-        """นำค่าที่ฟิกซ์ไว้ในช่อง เริ่ม/จบ ไปบวก (+) หรือลบ (-) กับเวลาของท่อนที่เลือกอยู่ทันที"""
         step = self._parse_step_seconds(self.txt_step_start if field == "start" else self.txt_step_end)
         delta = round(step * direction, 2)
         target_rows = self._get_target_rows_for_time_edit()
@@ -1972,7 +1940,6 @@ class SermonTranscriberApp(QMainWindow):
         elif col == self.COL_TEXT:
             self.transcript_data[row]["text"] = item.text()
 
-    # ---------- มีเดียเพลย์เยอร์: พรีวิวฟังท่อนที่เลือกต่อๆ กัน ----------
     def play_checked_sequentially(self):
         if not self.audio_path or not self.transcript_data:
             return
@@ -2092,7 +2059,6 @@ class SermonTranscriberApp(QMainWindow):
         self._is_slider_dragging = False
         self.player.setPosition(self.slider_pos.value())
 
-    # ---------- Export เสียง & ข้อความ ----------
     def choose_output_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "เลือกโฟลเดอร์ปลายทาง", self.txt_output_folder.text())
         if folder:
